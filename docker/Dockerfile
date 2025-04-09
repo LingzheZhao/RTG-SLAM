@@ -148,7 +148,7 @@ RUN git clone https://github.com/PointCloudLibrary/pcl.git &&\
     rm -rf /tmp/*
 
 # Install OpenEXR for OpenCV
-ARG OPENEXR_VERSION=3.3.3
+ARG OPENEXR_VERSION=3.2.1
 RUN wget https://github.com/AcademySoftwareFoundation/openexr/archive/refs/tags/v${OPENEXR_VERSION}.tar.gz &&\
     tar -xvzf v${OPENEXR_VERSION}.tar.gz &&\
     cd openexr-${OPENEXR_VERSION} &&\
@@ -213,25 +213,22 @@ RUN git clone https://github.com/HuajianUP/Photo-SLAM.git /opt/Photo-SLAM \
    &&  cp ../lib/*.so /usr/local/lib
 
 # RTG-SLAM
-COPY build_orb.sh /tmp/build_orb.sh
-RUN git clone https://github.com/LingzheZhao/RTG-SLAM \
-   && cd RTG-SLAM \
-   && git -c url.https://github.com/.insteadOf=git@github.com: submodule update --init --recursive \
-   && rm build_orb.sh && cp /tmp/build_orb.sh . \
-   && chmod u+x build_orb.sh \
-   && ./build_orb.sh
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/RTG-SLAM/thirdParty/install/lib
 ENV PATH=$PATH:/opt/RTG-SLAM/thirdParty/install/bin
-
-# RTG-SLAM deps
 RUN apt-get update && apt-get remove -y python3-blinker && apt-get clean &&\
     pip install -U "numpy<2.0" scipy plyfile open3d fvcore scikit-image \
                     tensorboard GPUtil torchmetrics trimesh pytorch_msssim rerun \
                     evo spatialmath-python \
                     icecream \
     &&\
-    pip install --no-index --no-cache-dir pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu118_pyt211/download.html &&\
-    cd /opt/RTG-SLAM/submodules/ &&\
+    pip install --no-index --no-cache-dir pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu118_pyt211/download.html
+RUN git clone https://github.com/LingzheZhao/RTG-SLAM \
+   && cd RTG-SLAM \
+   && git -c url.https://github.com/.insteadOf=git@github.com: submodule update --init --recursive \
+   && chmod u+x build_orb.sh \
+   && ./build_orb.sh
+
+RUN cd /opt/RTG-SLAM/submodules/ &&\
     pip install ./simple-knn ./diff-gaussian-rasterizer-depth  ./cuda_utils
 
 WORKDIR /tmp
