@@ -29,7 +29,7 @@ echo ${python_env}
 git clone -b v0.6 https://github.com/stevenlovegrove/Pangolin.git
 cd Pangolin
 mkdir -p build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=${install_path}
+cmake .. -DCMAKE_INSTALL_PREFIX=${install_path} -DBUILD_PANGOLIN_LIBOPENEXR=OFF
 make install -j
 
 # Ubuntu OpenCV path
