@@ -13,6 +13,7 @@ numpy_include=$(python -c "import numpy; print(numpy.get_include())")
 
 if [ ! -f $python_lib ]; then
     python_lib=${python_prefix}/lib/x86_64-linux-gnu/libpython3.10.so
+    echo "Using $python_lib"
     if [ ! -f $python_lib ]; then
         echo "libpython3.10.so NOT FOUND!"
         return 1
@@ -70,4 +71,3 @@ cmake .. -DPYTHON_INCLUDE_DIRS=${python_include} \
          -DCMAKE_INSTALL_PREFIX=${python_env}
 
 make install -j
-

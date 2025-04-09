@@ -6,5 +6,5 @@ frame_step: 0
 frame_num: -1
 
 # dataset params:
-source_path: "./data/Replica/office4"
+source_path: "/run/determined/workdir/data/Replica/office4"
 save_path: "output/dataset/Replica/office4"

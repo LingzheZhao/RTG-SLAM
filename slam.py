@@ -1,5 +1,6 @@
 import os
 from argparse import ArgumentParser
+from pathlib import Path
 
 from utils.config_utils import read_config
 parser = ArgumentParser(description="Training script parameters")
@@ -19,6 +20,11 @@ from SLAM.utils import *
 from SLAM.eval import eval_frame
 from utils.general_utils import safe_state
 from utils.monitor import Recorder
+from utils.writers_image import ImageWriter, ImageWriterConfig
+from utils.writers_pose import (
+    TumTrajectoryWriter, TumTrajectoryWriterConfig,
+    NumpyTrajectoryWriter, NumpyTrajectoryWriterConfig
+)
 
 torch.set_printoptions(4, sci_mode=False)
 
@@ -47,11 +53,27 @@ def main():
     gaussian_map = Mapping(args, time_recorder)
     gaussian_map.create_workspace()
     gaussian_tracker = Tracker(args)
+    all_frames = []
+    all_frames_id = []
     # save config file
     prepare_cfg(args)
     # set time log
     tracker_time_sum = 0
     mapper_time_sum = 0
+    output_path = args.save_path
+    if not os.path.exists(output_path):
+        os.makedirs(output_path, exist_ok=True)
+
+    image_writer: ImageWriter = ImageWriterConfig(
+        workdir=Path(output_path) / "renders",
+        enabled=True,
+    ).setup()
+    pose_writer_tum: TumTrajectoryWriter = TumTrajectoryWriterConfig(
+        filename=Path(output_path) / "traj_tum.txt"
+    ).setup()
+    pose_writer_numpy: NumpyTrajectoryWriter = NumpyTrajectoryWriterConfig(
+        filename=Path(output_path) / "traj.npz"
+    ).setup()
 
     # start SLAM
     for frame_id, frame_info in enumerate(dataset.scene_info.train_cameras):
@@ -112,6 +134,8 @@ def main():
 
         gaussian_map.time += 1
         move_to_cpu(curr_frame)
+        all_frames.append(curr_frame.move_to_cpu_clone())
+        all_frames_id.append(frame_id)
         torch.cuda.empty_cache()
     print("\n========== main loop finish ==========\n")
     print(
@@ -137,6 +161,30 @@ def main():
         run_pcd=False
     )
     
+    print(f"Number of frames: {len(gaussian_map.all_frames)}")
+    print(f"Number of keyframes: {len(gaussian_map.keyframe_list)}")
+    assert len(gaussian_map.all_frames) == len(gaussian_map.all_frames_id)
+    for frame_id__, frame in zip(all_frames_id, all_frames):
+        eval_frame(
+            gaussian_map,
+            frame,
+            os.path.join(gaussian_map.save_path, "eval_render"),
+            min_depth=gaussian_map.min_depth,
+            max_depth=gaussian_map.max_depth,
+            save_picture=True,
+            run_pcd=False,
+            image_writer=image_writer,
+            frame_id=frame_id__,
+        )
+        pose_writer_tum.write(
+            timestamp=frame_id__,
+            pose=frame.get_c2w.cpu()
+        )
+        pose_writer_numpy.write(
+            timestamp=frame_id__,
+            pose=frame.get_c2w.cpu(),
+        )
+
     gaussian_map.save_model(save_data=True)
     gaussian_tracker.save_traj(args.save_path)
     time_recorder.cal_fps()
@@ -145,6 +193,7 @@ def main():
     
     if args.pcd_densify:    
         densify_pcd = gaussian_map.stable_pointcloud.densify(1, 30, 5)
+        os.makedirs(os.path.join(args.save_path, "save_model"), exist_ok=True)
         o3d.io.write_point_cloud(
             os.path.join(args.save_path, "save_model", "pcd_densify.ply"), densify_pcd
         )

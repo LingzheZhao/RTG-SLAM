@@ -12,5 +12,7 @@ cuda_utils
 diff-gaussian-rasterizer-depth
 simple-knn
 *.txt
+*.log
 build
 lib
+thirdParty/

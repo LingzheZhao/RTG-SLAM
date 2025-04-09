@@ -15,6 +15,7 @@ import trimesh
 from pytorch_msssim import ms_ssim
 from scipy.spatial import cKDTree as KDTree
 from tqdm import tqdm
+from utils.writers_image import ImageWriter
 
 def eval_ssim(image_es, image_gt):
     return ms_ssim(
@@ -237,6 +238,8 @@ def eval_frame(
     sample_nums=1000000,
     pcd_transform=np.eye(4),
     save_picture=False,
+    image_writer: ImageWriter=None,
+    frame_id: int=None,
 ):
     with torch.no_grad():
         # save render
@@ -271,4 +274,15 @@ def eval_frame(
                 sample_nums
             )
             losses.update(pcd_losses)
+
+        if image_writer is not None:
+            assert frame_id is not None
+            image_writer.write_image(
+                f"rgb_{frame_id:04}.png",
+                render_output["render"].cpu().detach(),
+            )
+            image_writer.write_image(
+                f"depth_{frame_id:04}.exr",
+                render_output["depth"].cpu().detach(),
+            )
         return losses

@@ -35,6 +35,8 @@ class Mapping(object):
         self.optimize_frames_ids = []
         self.processed_frames = deque(maxlen=self.memory_length)
         self.processed_map = deque(maxlen=self.memory_length)
+        self.all_frames = []
+        self.all_frames_id = []
         self.keyframe_ids = []
         self.keyframe_list = []
         self.keymap_list = []
