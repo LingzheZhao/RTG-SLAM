@@ -1,5 +1,5 @@
 #!/bin/bash  
-
+set -xe
 mkdir -p thirdParty && cd thirdParty
 install_path=$(pwd)/install
 mkdir -p ${install_path}
