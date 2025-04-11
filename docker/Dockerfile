@@ -55,7 +55,7 @@ RUN sed -i "s/archive.ubuntu.com/mirrors.ustc.edu.cn/g" /etc/apt/sources.list &&
         # PCL
 #        libpcl-dev \
         # VTK
-#        libvtk9-dev \
+        libvtk9-dev libvtk9.1-qt python3-vtk9 \
         # OSMesa build dependencies
         libosmesa6-dev \
         # EGL build dependencies
@@ -118,24 +118,24 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6
 ARG VTK_VERSION=9.1
 ARG VTK_SUB_VERSION=9.1.0
 RUN apt-get --purge remove -y "libpcl*" libvtk9-dev &&\
-    apt-get update && apt-get install -y libx11-dev && apt-get clean &&\
-    wget https://www.vtk.org/files/release/${VTK_VERSION}/VTK-${VTK_SUB_VERSION}.tar.gz &&\
-    tar -xvzf VTK-${VTK_SUB_VERSION}.tar.gz &&\
-    cd VTK-${VTK_SUB_VERSION} &&\
-    cmake -B build -GNinja \
-        -DVTK_USE_CUDA=ON \
-        -DVTK_OPENGL_HAS_EGL:BOOL=ON \
-        -DVTK_USE_X:BOOL=ON \
-        -DVTK_DEFAULT_RENDER_WINDOW_HEADLESS:BOOL=ON \
-        -DVTK_QT_VERSION:STRING=5 \
-        -DQT_QMAKE_EXECUTABLE:PATH=`which qmake` \
-        -DVTK_Group_Qt:BOOL=ON \
-        -DCMAKE_PREFIX_PATH:PATH=`which cmake` \
-        -DBUILD_SHARED_LIBS:BOOL=ON \
-    &&\
-    cmake --build build -t install &&\
-    ldconfig &&\
-    rm -rf /tmp
+    apt-get update && apt-get install -y libx11-dev && apt-get clean
+#    wget https://www.vtk.org/files/release/${VTK_VERSION}/VTK-${VTK_SUB_VERSION}.tar.gz &&\
+#    tar -xvzf VTK-${VTK_SUB_VERSION}.tar.gz &&\
+#    cd VTK-${VTK_SUB_VERSION} &&\
+#    cmake -B build -GNinja \
+#        -DVTK_USE_CUDA=ON \
+#        -DVTK_OPENGL_HAS_EGL:BOOL=ON \
+#        -DVTK_USE_X:BOOL=ON \
+#        -DVTK_DEFAULT_RENDER_WINDOW_HEADLESS:BOOL=ON \
+#        -DVTK_QT_VERSION:STRING=5 \
+#        -DQT_QMAKE_EXECUTABLE:PATH=`which qmake` \
+#        -DVTK_Group_Qt:BOOL=ON \
+#        -DCMAKE_PREFIX_PATH:PATH=`which cmake` \
+#        -DBUILD_SHARED_LIBS:BOOL=ON \
+#    &&\
+#    cmake --build build -t install &&\
+#    ldconfig &&\
+#    rm -rf /tmp
 RUN git clone https://github.com/PointCloudLibrary/pcl.git &&\
     cd pcl &&\
     git checkout pcl-1.14.1 &&\
@@ -229,6 +229,7 @@ RUN git clone https://github.com/LingzheZhao/RTG-SLAM \
    && ./build_orb.sh
 
 RUN cd /opt/RTG-SLAM/submodules/ &&\
-    pip install ./simple-knn ./diff-gaussian-rasterizer-depth  ./cuda_utils
+    pip install ./simple-knn ./diff-gaussian-rasterizer-depth  ./cuda_utils &&\
+    pip install jaxtyping pypose
 
 WORKDIR /tmp

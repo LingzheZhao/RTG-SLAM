@@ -128,7 +128,7 @@ class TumTrajectoryWriter(TrajectoryWriter):
         if isinstance(pose, LieTensor):
             pose = pose.tensor()
         if pose.shape[-1] == 4:
-            pose = pp.mat2SE3(pose).tensor().squeeze()
+            pose = pp.mat2SE3(pose, check=False).tensor().squeeze()
         pose = pose.squeeze()
         assert pose.dim() == 1
         self.data[timestamp] = pose
