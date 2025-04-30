@@ -111,7 +111,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write("\r")
         # the exact output you're looking for:
-        sys.stdout.write("Reading camera {}/{}".format(idx + 1, len(cam_extrinsics)))
+        sys.stdout.write("readColmapCameras Reading camera {}/{}".format(idx + 1, len(cam_extrinsics)))
         sys.stdout.flush()
 
         extr = cam_extrinsics[key]
@@ -407,7 +407,7 @@ def readTumCameras(
         idx = idx_
         sys.stdout.write("\r")
         # the exact output you're looking for:
-        sys.stdout.write("Reading camera {}/{}".format(idx + 1, len(indices)))
+        sys.stdout.write("readTumCameras Reading camera {}/{}".format(idx + 1, len(indices)))
         sys.stdout.flush()
         (i, j, k) = associations[idx]
         image_path = image_paths[idx]
@@ -567,7 +567,19 @@ def readTumSceneInfo(
                     np.abs(tstamp_pose[k] - t) < max_dt
                 ):
                     associations.append((i, j, k))
-
+        if len(associations) == 0:
+            print(
+                "No associations found between images, depths, and poses. "
+                "Please check the timestamps and ensure they are properly synchronized."
+            )
+            print(f"tstamp_image: {tstamp_image}")
+            print(f"tstamp_depth: {tstamp_depth}")
+            print(f"tstamp_pose: {tstamp_pose}")
+            print(f"associations: {associations}")
+            raise RuntimeError(
+                "No associations found between images, depths, and poses. "
+                "Please check the timestamps and ensure they are properly synchronized."
+            )
         return associations
 
     def pose_matrix_from_quaternion(pvec):
@@ -584,6 +596,10 @@ def readTumSceneInfo(
         pose_list = os.path.join(datapath, "groundtruth.txt")
     elif os.path.isfile(os.path.join(datapath, "pose.txt")):
         pose_list = os.path.join(datapath, "pose.txt")
+    else:
+        raise FileNotFoundError(
+            "No pose file found. Please provide a valid pose file in the directory."
+        )
 
     config_path = os.path.join(datapath, "config.yaml")
     with open(config_path, "r") as f:
@@ -608,30 +624,40 @@ def readTumSceneInfo(
     tstamp_depth = depth_data[:, 0].astype(np.float64)
     tstamp_pose = pose_data[:, 0].astype(np.float64)
     associations = associate_frames(tstamp_image, tstamp_depth, tstamp_pose)
-
+    print(
+        f"{len(associations)} associations found between"
+        f"{len(image_list)} images, {len(depth_list)} depths, and {len(pose_list)} poses"
+    )
     
     indicies = [0]
     frame_rate = 32
     for i in range(1, len(associations)):
         t0 = tstamp_image[associations[indicies[-1]][0]]
         t1 = tstamp_image[associations[i][0]]
-        if t1 - t0 > 1.0 / frame_rate:
-            indicies += [i]
+        # if t1 - t0 > 1.0 / frame_rate:
+            # indicies += [i]
+        indicies += [i]
 
     n_img = len(indicies)
+    print(f"Total {n_img} images in the dataset")
     if frame_num == -1:
         indexs = list(range(n_img))
     else:
         indexs = list(range(frame_num))
     indicies = [frame_start + i * (frame_step + 1) for i in indexs]
     indicies = [i for i in indicies if i < n_img]
+    print(f"Total {len(indicies)} images in the dataset after sampling")
     
     color_paths, poses, depth_paths, timestamps = [], [], [], []
     inv_pose = None
     rgbd_pose_tupe = []
     for idx in range(len(indicies)):
         ix = indicies[idx]
-        (i, j, k) = associations[ix]
+        try:
+            (i, j, k) = associations[ix]
+        except:
+            print("Error: association not found for index {}".format(ix))
+            raise NotImplementedError
         color_paths += [os.path.join(datapath, image_data[i, 1])]
         depth_paths += [os.path.join(datapath, depth_data[j, 1])]
         rgbd_pose_tupe.append([image_data[i, 1], depth_data[j, 1], tstamp_pose[k]])
@@ -698,7 +724,7 @@ def readReplicaCameras(color_paths, depth_paths, poses, config, indices):
         idx = indices[idx_]
         sys.stdout.write("\r")
         # the exact output you're looking for:
-        sys.stdout.write("Reading camera {}/{}".format(idx_ + 1, len(indices)))
+        sys.stdout.write("readReplicaCameras Reading camera {}/{}".format(idx_ + 1, len(indices)))
         sys.stdout.flush()
 
         depth_scale = config["scale"]
@@ -790,6 +816,10 @@ def readReplicaSceneInfo(
 
     color_paths = sorted(glob.glob(f"{datapath}/results/frame*.jpg"))
     depth_paths = sorted(glob.glob(f"{datapath}/results/depth*.png"))
+    if len(depth_paths) == 0:
+        depth_paths = sorted(glob.glob(f"{datapath}/results/depth*.exr"))
+    if len(depth_paths) == 0:
+        raise FileNotFoundError(f"Depth image PNG/EXR not found under {depth_paths}")
     n_img = len(color_paths)
     timestamps = [i / 30.0 for i in range(n_img)]
 
@@ -862,7 +892,9 @@ def readCameras(
         idx = indices[idx_]
         sys.stdout.write("\r")
         # the exact output you're looking for:
-        sys.stdout.write("Reading camera {}/{}".format(idx_ + 1, len(indices)))
+        sys.stdout.write("readCameras Reading camera {}/{}".format(idx_ + 1, len(indices)))
+        # raise NotImplementedError
+        # sys.stdout.write("readCameras Reading camera {}/{}".format(idx + 1, len(indices)))
         sys.stdout.flush()
 
         c2w = poses[idx]
@@ -882,9 +914,12 @@ def readCameras(
         T = w2c[:3, 3]
 
         image_color = Image.open(color_paths[idx])
-        image_depth = (
-            np.asarray(Image.open(depth_paths[idx]), dtype=np.float32) / depth_scale
-        )
+        if depth_paths[idx].lower().endswith("png"):
+            image_depth = np.asarray(Image.open(depth_paths[idx]), dtype=np.float32) / depth_scale
+        elif depth_paths[idx].lower().endswith("exr"):
+            image_depth = cv2.imread(depth_paths[idx], cv2.IMREAD_UNCHANGED)
+        else:
+            raise NotImplementedError
         image_color = np.asarray(
             image_color.resize((image_depth.shape[1], image_depth.shape[0]))
         )

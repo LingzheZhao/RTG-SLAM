@@ -1,0 +1,10 @@
+parent: "configs/mbavo_base.yaml"
+save_step: 400
+
+frame_start: 0
+frame_step: 0
+frame_num: -1
+
+# dataset params:
+source_path: "/run/determined/workdir/data/MBA-VO/archviz1"
+save_path: "output/dataset/MBA-VO/archviz1"

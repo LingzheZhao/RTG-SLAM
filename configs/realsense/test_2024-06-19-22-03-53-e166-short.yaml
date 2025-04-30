@@ -1,0 +1,11 @@
+parent: "configs/realsense_base.yaml"
+
+frame_start: 0
+frame_step: 0
+frame_num: -1
+
+# dataset params:
+source_path: "data/realsense/test_2024-06-19-22-03-53-e166-short"
+save_path: "output/dataset/realsense/test_2024-06-19-22-03-53-e166-short"
+
+orb_settings_path: "configs/orb_config/realsense.yaml"

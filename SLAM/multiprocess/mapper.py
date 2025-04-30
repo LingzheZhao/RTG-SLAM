@@ -126,6 +126,7 @@ class Mapping(object):
         self.error_gaussians_remove()
         self.gaussians_delete()
         move_to_cpu(frame)
+        # time.sleep(0.1)
 
     def gaussians_add(self, frame):
         self.temp_points_init(frame)
@@ -136,11 +137,27 @@ class Mapping(object):
     def update_poses(self, new_poses):
         if new_poses is None:
             return
+        # check if the new poses are valid
+        if not isinstance(new_poses, dict):
+            raise ValueError(f"new_poses should be a dictionary, but got {type(new_poses)}")
+        # if not all(isinstance(k, int) for k in new_poses.keys()):
+        #     raise ValueError("keys of new_poses should be integers")
+        # if not all(isinstance(v, torch.Tensor) for v in new_poses.values()):
+        #     raise ValueError("values of new_poses should be torch tensors")
+        # if not all(v.shape == (4, 4) for v in new_poses.values()):
+        #     raise ValueError("values of new_poses should have shape (4, 4)")
         for frame in self.processed_frames:
-            frame.updatePose(new_poses[frame.uid])
+            try:
+                frame.updatePose(new_poses[
+                    list(new_poses.keys())[frame.uid]
+                ])
+            except:
+                raise ValueError(f"frame.uid: {frame.uid} is not in new_poses: {new_poses.keys()}")
 
         for frame in self.keyframe_list:
-            frame.updatePose(new_poses[frame.uid])
+            frame.updatePose(new_poses[
+                list(new_poses.keys())[frame.uid]
+            ])
 
     def local_optimize(self, frame, update_args):
         print("===== map optimize =====")

@@ -241,12 +241,12 @@ def prepare_cfg(
             os.path.join(save_path, "cameras.json"),
         )
     )
-    os.system(
-        "cp {} {}".format(
-            os.path.join(data_path, "points3d_depth.ply"),
-            os.path.join(save_path, "input.ply"),
-        )
-    )
+    # os.system(
+    #     "cp {} {}".format(
+    #         os.path.join(data_path, "points3d_depth.ply"),
+    #         os.path.join(save_path, "input.ply"),
+    #     )
+    # )
     os.makedirs(os.path.join(save_path, "point_cloud"), exist_ok=True)
     with open(os.path.join(save_path, "cfg_args"), "w") as f:
         cfg_args = "Namespace(data_device='cuda', eval=False, images='images', model_path='{}', resolution=-1, sh_degree={}, source_path='{}', white_background=False)".format(

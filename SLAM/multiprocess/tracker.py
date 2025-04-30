@@ -16,6 +16,7 @@ from utils.camera_utils import loadCam
 def convert_poses(trajs):
     poses = []
     stamps = []
+    poses_dict = {}
     for traj in trajs:
         stamp, r00, r01, r02, t0, r10, r11, r12, t1, r20, r21, r22, t2 = traj
         pose_ = np.eye(4)
@@ -23,7 +24,12 @@ def convert_poses(trajs):
         pose_[:3, 3] = np.array([t0, t1, t2])
         poses.append(pose_)
         stamps.append(stamp)
-    return poses, stamps
+    # return poses, stamps
+    for i in range(len(poses)):
+        pose_ = poses[i]
+        stamp = stamps[i]
+        poses_dict[stamp] = pose_
+    return poses_dict, stamps
 
 
 class Tracker(object):
@@ -226,22 +232,35 @@ class Tracker(object):
         if tracking_success and self.orb_useicp:
             print("success")
             self.orb_backend.track_with_icp_pose(
-                self.curr_frame["color_map_orb"],
-                self.curr_frame["depth_map_orb"],
+                self.curr_frame["color_map_orb"].copy(),
+                self.curr_frame["depth_map_orb"].copy(),
                 pose_t1_t0.astype(np.float32),
                 self.curr_frame["timestamp"],
             )
             time.sleep(0.005)
         else:
+            print("failed to track with icp, use orb instead")
+            # print shape of images
+            print("color_map_orb shape: ", self.curr_frame["color_map_orb"].shape)
+            print("depth_map_orb shape: ", self.curr_frame["depth_map_orb"].shape)
+            print("timestamp: ", self.curr_frame["timestamp"])
             self.orb_backend.track_with_orb_feature(
-                self.curr_frame["color_map_orb"],
-                self.curr_frame["depth_map_orb"],
+                self.curr_frame["color_map_orb"].copy(),
+                self.curr_frame["depth_map_orb"].copy(),
                 self.curr_frame["timestamp"],
             )
+            # self.orb_backend.track_with_icp_pose(
+            #     self.curr_frame["color_map_orb"],
+            #     self.curr_frame["depth_map_orb"],
+            #     pose_t1_t0.astype(np.float32),
+            #     self.curr_frame["timestamp"],
+            # )
             time.sleep(0.005)
         traj_history = self.orb_backend.get_trajectory_points()
         pose_es_t1, _ = convert_poses(traj_history[-2:])
-        return pose_es_t1[-1]
+        pose_es_t1: dict
+        ret = pose_es_t1[list(pose_es_t1.keys())[-1]]
+        return ret
 
     def initialize_orb(self):
         if not self.use_gt_pose and self.use_orb_backend and self.orb_backend is None:
@@ -254,6 +273,10 @@ class Tracker(object):
             self.orb_backend.initialize(self.orb_useicp)
 
     def initialize_tracker(self):
+        # check shapes:
+        print("initialize tracker")
+        print("color_map_orb shape: ", self.curr_frame["color_map_orb"].shape)
+        print("depth_map_orb shape: ", self.curr_frame["depth_map_orb"].shape)
         if self.use_orb_backend:
             self.orb_backend.process_image_rgbd(
                 self.curr_frame["color_map_orb"],
@@ -354,6 +377,7 @@ class Tracker(object):
         if not self.use_gt_pose and self.use_orb_backend:
             traj_history = self.orb_backend.get_trajectory_points()
             self.pose_es, _ = convert_poses(traj_history)
+        self.pose_es = list(self.pose_es.values())
         pose_es = np.stack(self.pose_es, axis=0)
         pose_gt = np.stack(self.pose_gt, axis=0)
         ates_ba = self.eval_total_ate(pose_es, pose_gt)
@@ -372,9 +396,14 @@ class Tracker(object):
             self.orb_backend.shutdown()
         
     def eval_ate(self, pose_es, pose_gt, frame_id=-1):
-        pose_es = np.stack(pose_es, axis=0)[:frame_id, :3, 3]
-        pose_gt = np.stack(pose_gt, axis=0)[:frame_id, :3, 3]
-        ate = eval_ate(pose_gt, pose_es)
+        try:
+            pose_es_ = np.stack(pose_es, axis=0)[:frame_id, :3, 3]
+            pose_gt_ = np.stack(pose_gt, axis=0)[:frame_id, :3, 3]
+        except:
+            raise ValueError(
+                f"pose_es: {pose_es} and pose_gt: {pose_gt} should be numpy array with shape (N, 4, 4)"
+            )
+        ate = eval_ate(pose_es_, pose_gt_)
         return ate
 
 

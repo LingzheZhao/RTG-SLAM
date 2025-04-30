@@ -1,0 +1,10 @@
+H: 480
+W: 768
+fx: 548.409
+fy: 548.409
+cx: 384.0
+cy: 240.0
+crop_edge: 0
+# distortion: [0.2624, -0.9531, -0.0054, 0.0026, 1.1633]
+distortion: [0., -0., -0., 0., 1.]
+png_depth_scale: 1.0 # for depth image in exr format
